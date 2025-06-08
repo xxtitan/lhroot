@@ -1,14 +1,15 @@
 #!/system/bin/sh
 
-if [ -x /system/xbin/busybox ]; then
-	busybox=/system/xbin/busybox
-elif [ -x /system/bin/busybox ]; then
-	busybox=/system/bin/busybox
-else
-	echo "Busybox not found!  Install it, dummy!"
-	log "Busybox not found!  Install it, dummy!"
-	exit
+# if busybox is not found, exit
+if ! command -v busybox >/dev/null 2>&1; then
+    echo "Busybox not found!  Install it, dummy!"
+    log "Busybox not found!  Install it, dummy!"
+    exit 1
 fi
+
+busybox=$(command -v busybox)
+sdkVer="$(getprop ro.system.build.version.sdk)"
+
 export bin=/system/bin
 if [ -n "$1" ]; then
     if [ -d "$1" ]; then
@@ -90,11 +91,13 @@ $busybox umount $mnt/data/data && echo "unmounted data/data"
 $busybox umount $mnt/data/dalvik-cache && echo "unmounted data/dalvik-cache"
 $busybox umount $mnt/linkerconfig && echo "unmounted linkerconfig"
 
-cd "$mnt/apex"
-for f in *; do
-    $busybox umount "$mnt/apex/$f" && echo "unmounted apex/$f"
-done
-cd - 2>&1 > /dev/null
+if [ $sdkVer -ge 29 ]; then
+    cd "$mnt/apex"
+    for f in *; do
+        $busybox umount "$mnt/apex/$f" && echo "unmounted apex/$f"
+    done
+    cd - 2>&1 > /dev/null
+fi
 
 export PATH=$PRESERVED_PATH
 
